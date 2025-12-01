@@ -1,0 +1,28 @@
+#cloud-config
+
+users:
+  - name: admin
+    groups: sudo, adm
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM9pQ2l8kLxZ1nNqMrR5sT6uV7wX8yZ9aB0cD1eF2gH3j gabriel.mendoza@technosoluciones.local
+
+hostname: prod-web-02
+manage_etc_hosts: true
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - python3
+  - python3-pip
+  - python3-apt
+  - ansible
+  - git
+  - curl
+
+runcmd:
+  - pip3 install --break-system-packages --upgrade pip ansible-core
+

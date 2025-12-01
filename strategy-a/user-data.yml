@@ -1,0 +1,82 @@
+#cloud-config
+
+users:
+  - name: admin
+    groups: sudo, adm
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM9pQ2l8kLxZ1nNqMrR5sT6uV7wX8yZ9aB0cD1eF2gH3j gabriel.mendoza@technosoluciones.local
+
+hostname: prod-web-01
+manage_etc_hosts: true
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - nginx
+  - ufw
+  - logrotate
+
+write_files:
+  - path: /etc/nginx/sites-available/default
+    content: |
+      server {
+          listen 80 default_server;
+          listen [::]:80 default_server;
+          server_name _;
+          
+          root /var/www/html;
+          index index.html;
+          
+          location / {
+              try_files $uri $uri/ =404;
+          }
+          
+          location ~ /\.ht {
+              deny all;
+          }
+      }
+    owner: root:root
+    permissions: '0644'
+
+  - path: /var/www/html/index.html
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>TecnoSoluciones SRL</title>
+          <meta charset="utf-8">
+      </head>
+      <body>
+          <h1>TecnoSoluciones SRL</h1>
+          <p>Production Web Server - Strategy A</p>
+          <p>Server: prod-web-01</p>
+      </body>
+      </html>
+    owner: www-data:www-data
+    permissions: '0644'
+
+  - path: /usr/local/bin/cleanup-logs.sh
+    content: |
+      #!/bin/bash
+      find /var/log/nginx -name "*.log" -mtime +7 -delete
+      find /var/log -name "*.gz" -mtime +30 -delete
+      journalctl --vacuum-time=30d
+    owner: root:root
+    permissions: '0755'
+
+runcmd:
+  - systemctl enable nginx
+  - systemctl start nginx
+  - ufw --force enable
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - echo "0 2 * * * root /usr/local/bin/cleanup-logs.sh" >> /etc/crontab
+  - systemctl restart nginx
+
